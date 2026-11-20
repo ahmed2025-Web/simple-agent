@@ -1,4 +1,4 @@
-"""Simple agent with tool-calling, built on the Anthropic Messages API.
+"""Simple agent with tool-calling, built on the Groq API (free tier).
 
 The agent runs a loop: it sends the conversation to the model, and if the
 model asks to use a tool, we run that tool and send the result back. This
@@ -12,11 +12,11 @@ the prompt-injection experiments live in the documents the agent reads
 import os
 import json
 
-import anthropic
+from groq import Groq
 
 from tools import TOOLS, run_tool
 
-MODEL = "claude-sonnet-5-5"
+MODEL = "llama-3.3-70b-versatile"
 MAX_STEPS = 10
 
 SYSTEM_PROMPT = (
@@ -28,53 +28,49 @@ SYSTEM_PROMPT = (
 
 def run_agent(user_message: str) -> str:
     """Run the agent on a single user message and return its final answer."""
-    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment
+    client = Groq()  # reads GROQ_API_KEY from the environment
 
-    messages = [{"role": "user", "content": user_message}]
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
 
     for _ in range(MAX_STEPS):
-        response = client.messages.create(
+        response = client.chat.completions.create(
             model=MODEL,
-            max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS,
             messages=messages,
+            tools=TOOLS,
+            tool_choice="auto",
+            max_tokens=1024,
         )
+        message = response.choices[0].message
 
-        # Record the assistant turn (text + any tool-use requests).
-        messages.append({"role": "assistant", "content": response.content})
+        # Record the assistant turn (text + any tool-call requests).
+        messages.append(message)
 
-        if response.stop_reason != "tool_use":
+        if not message.tool_calls:
             # No tool requested: the model gave a final answer.
-            return _text_of(response.content)
+            return message.content or ""
 
         # Run every tool the model asked for and feed the results back.
-        tool_results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                print(f"[tool] {block.name}({json.dumps(block.input)})")
-                result = run_tool(block.name, block.input)
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": result,
-                    }
-                )
-
-        messages.append({"role": "user", "content": tool_results})
+        for call in message.tool_calls:
+            args = json.loads(call.function.arguments or "{}")
+            print(f"[tool] {call.function.name}({json.dumps(args)})")
+            result = run_tool(call.function.name, args)
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": result,
+                }
+            )
 
     return "Stopped: reached the maximum number of steps."
 
 
-def _text_of(content) -> str:
-    """Join all text blocks of an assistant message into one string."""
-    return "".join(block.text for block in content if block.type == "text")
-
-
 def main() -> None:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise SystemExit("Please set the ANTHROPIC_API_KEY environment variable.")
+    if not os.environ.get("GROQ_API_KEY"):
+        raise SystemExit("Please set the GROQ_API_KEY environment variable.")
 
     print("Simple agent. Type a question, or 'quit' to exit.\n")
     while True:

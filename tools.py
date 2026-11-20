@@ -12,34 +12,40 @@ import os
 
 NOTES_DIR = os.path.join(os.path.dirname(__file__), "notes")
 
-# Tool schemas sent to the model.
+# Tool schemas sent to the model (Groq / OpenAI function-calling format).
 TOOLS = [
     {
-        "name": "read_note",
-        "description": "Read the contents of one of the user's notes by file name.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "The note file name, e.g. 'todo.txt'.",
-                }
+        "type": "function",
+        "function": {
+            "name": "read_note",
+            "description": "Read the contents of one of the user's notes by file name.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The note file name, e.g. 'todo.txt'.",
+                    }
+                },
+                "required": ["name"],
             },
-            "required": ["name"],
         },
     },
     {
-        "name": "calculator",
-        "description": "Evaluate a basic arithmetic expression, e.g. '3 * (4 + 5)'.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "expression": {
-                    "type": "string",
-                    "description": "The arithmetic expression to evaluate.",
-                }
+        "type": "function",
+        "function": {
+            "name": "calculator",
+            "description": "Evaluate a basic arithmetic expression, e.g. '3 * (4 + 5)'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "The arithmetic expression to evaluate.",
+                    }
+                },
+                "required": ["expression"],
             },
-            "required": ["expression"],
         },
     },
 ]

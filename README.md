@@ -6,7 +6,7 @@ against it.
 
 ## How it works
 
-The agent (`agent.py`) runs a simple loop on top of the Anthropic Messages API:
+The agent (`agent.py`) runs a simple loop on top of the Groq API (free tier):
 
 1. Send the conversation (and the available tools) to the model.
 2. If the model asks to use a tool, run it (`tools.py`) and send the result back.
@@ -19,11 +19,13 @@ Two tools are available:
 
 ## Setup
 
+Get a free API key at https://console.groq.com, then:
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=sk-ant-...   # or copy .env.example to .env
+export GROQ_API_KEY=gsk_...   # or copy .env.example to .env
 ```
 
 ## Run
@@ -61,6 +63,7 @@ agent falls for it.
 
 ## Notes
 
-- Model used: `claude-sonnet-5-5` (change `MODEL` in `agent.py`).
-- To use a different provider, swap the `client.messages.create(...)` call in
-  `agent.py` for that provider's SDK; the loop structure stays the same.
+- Model used: `llama-3.3-70b-versatile` on Groq (change `MODEL` in `agent.py`).
+- Groq uses an OpenAI-style chat/tools API, so switching to OpenAI or another
+  OpenAI-compatible provider mostly means changing the client and the model name;
+  the loop structure stays the same.
